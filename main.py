@@ -1,15 +1,5 @@
-from subprocess import Popen
-import shutil
+from Network.NetworkNode import NetworkNode
 
+folder = input("insira o endereço pasta a ser sincronizada (node 1): ")
 
-Popen('python node.py')
-
-print("teste1")
-
-input()
-
-Popen('python node2.py')
-
-print("teste2")
-
-input()
+n = NetworkNode(folder)
