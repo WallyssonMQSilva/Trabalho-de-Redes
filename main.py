@@ -18,7 +18,7 @@ import datetime
 
 
 #from Network.NetworkNode import NetworkNode
-
+ 
 
 class NetworkNode():
     BUFFER_SIZE = 4096
@@ -824,13 +824,13 @@ if is_admin():
     print("running as administrator")
 else:
     ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
-    sys.exit(0)
+    #sys.exit(0)
 
 
 # ips check
 
 print("testando IPs da rede")
-base_ip = "192.168."
+base_ip = '.'.join(socket.gethostbyname(socket.gethostname()).split('.')[:2])+'.'
 reachable_ips = []
 num_threads = 50
 
