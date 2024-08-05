@@ -1,0 +1,200 @@
+from tkinter import *
+
+class GUIHelper:
+    def __init__(self, gui):
+        self.gui = gui
+
+    def generate_handler(self, func, *args):
+        def handler(event=None):
+            func(*args)
+
+        return handler
+
+    def generate_main_text(self, text, parent=None):
+        if not parent:
+            parent = self.gui.root
+        txt_var = StringVar(parent)
+        txt_var.set(text)
+        lbl = Label(parent, textvariable=txt_var, bg=self.gui.bg, anchor=W)
+        lbl.grid(row=0, column=0, sticky=W, pady=20, padx=20)
+        return txt_var
+
+
+class GUI:
+    def __init__(self, program):
+        self.master = program
+        self.root = Tk()
+        self.sizes = [530, 200]
+        self.bg = 'white'
+        self.helper = GUIHelper(self)
+
+    def initial(self):
+        self.root.geometry(str(self.sizes[0]) + 'x' + str(self.sizes[1]))
+        self.root.configure(bg=self.bg)
+        self.root.title("File Sync Helper")
+        self.helper.generate_main_text("Welcome!")
+
+        # share_folder_btn = Button(self.root,
+        #                         text='Add a folder to LAN synchronization',
+        #                        width=50)
+        # share_folder_btn.grid(row=1, columnspan=3, padx=30, pady=5)
+        # share_folder_btn.bind('<Button-1>',
+        #                      self.helper.generate_handler(self.share_folder))
+
+        see_files_btn = Button(self.root,
+                               text='See synchronized files state',
+                               width=50)
+        see_files_btn.grid(row=2, columnspan=3, padx=30, pady=5)
+        see_files_btn.bind('<Button-1>',
+                           self.helper.generate_handler(self.see_files))
+
+        start_folder_btn = Button(self.root,
+                                  text='Join existing folder synchronization',
+                                  width=50)
+        start_folder_btn.grid(row=3, columnspan=3, padx=30, pady=5)
+        start_folder_btn.bind('<Button-1>',
+                              self.helper.generate_handler(self.start_folder))
+
+    def share_folder(self):
+        cur_window = Toplevel(self.root, bg=self.bg)
+        main_txt = self.helper.generate_main_text("Enter folder path to share it:",
+                                                  cur_window)
+
+        folder_path = StringVar(cur_window)
+        folder_path.set("Absolute path of folder")
+        path_txt = Entry(cur_window, textvariable=folder_path, width=30,
+                         bg='light grey')
+        path_txt.grid(row=1, column=0, columnspan=2, sticky=W, pady=20, padx=20)
+
+        submit_btn = Button(cur_window, text='Submit')
+        submit_btn.grid(row=1, column=2, sticky=E, pady=20, padx=20)
+
+        def submit_handler():
+            if path_txt.get() != "Absolute path of folder":
+                main_txt.set("Added. Type  new one?")
+            else:
+                main_txt.set("Error")
+
+        submit_btn.bind('<Button-1>',
+                        self.helper.generate_handler(submit_handler))
+        
+
+    def see_files(self):
+        cur_window = Toplevel(self.root, bg=self.bg)
+        main_txt = self.helper.generate_main_text("Choose sync folder:",
+                                                  cur_window)
+        refresh_btn = Button(cur_window, text='Refresh', anchor=E)
+        refresh_btn.grid(row=0, column=2, pady=20, padx=20, sticky=E)
+        cur_widgets = []
+
+        def get_folder_data():
+            return self.master.get_synched_folders()
+
+        def refresh():
+            nonlocal cur_widgets
+            for w in cur_widgets:
+                w.destroy()
+            cur_widgets = []
+            folderdata = get_folder_data()
+            cur_window.geometry(str(self.sizes[0]) + 'x' +
+                                str(self.sizes[1] + 20 + 35 * (len(folderdata) - 3)))
+
+            for i, folder in enumerate(folderdata):
+                folder_btn = Button(cur_window, text=folder, width=50)
+                folder_btn.grid(row=i + 1, columnspan=3, padx=30, pady=5)
+                folder_btn.bind('<Button-1>',
+                                self.helper.generate_handler(self.show_folder, folder))
+                cur_widgets.append(folder_btn)
+
+        refresh_btn.bind('<Button-1>',
+                         self.helper.generate_handler(refresh))
+        refresh()
+
+    def show_folder(self, folder):
+        cur_window = Toplevel(self.root, bg=self.bg)
+        main_txt = self.helper.generate_main_text(folder + "'s files:",
+                                                  cur_window)
+        refresh_btn = Button(cur_window, text='Refresh', anchor=E)
+        refresh_btn.grid(row=0, column=2, pady=20, padx=20, sticky=E)
+        cur_labels = []
+
+        def get_metadata():
+            return self.master.get_files_metadata(folder)
+
+        def refresh_handler():
+            nonlocal cur_labels
+            for w in cur_labels:
+                w.destroy()
+            cur_labels = []
+            metadata = get_metadata()
+            mx = self.sizes[0]
+            for i, file in enumerate(metadata):
+                file_str = "  ||  ".join(metadata[i])
+                mx = max(mx, 40+6*len(file_str))
+                file_lbl = Label(cur_window, text=file_str, anchor=W)
+                file_lbl.grid(row=i + 1, columnspan=3, padx=30, pady=5, sticky=W)
+                cur_labels.append(file_lbl)
+            cur_window.geometry(str(mx) + 'x' +
+                                str(self.sizes[1] + 20 + 30 * (len(metadata) - 3)))
+
+        refresh_btn.bind('<Button-1>',
+                         self.helper.generate_handler(refresh_handler))
+        refresh_handler()
+
+    def start_folder(self):
+        cur_window = Toplevel(self.root, bg=self.bg)
+        main_txt = self.helper.generate_main_text("Select folders for synchronization:",
+                                                  cur_window)
+        refresh_btn = Button(cur_window, text='Refresh', anchor=E)
+        refresh_btn.grid(row=0, column=2, pady=20, padx=20, sticky=E)
+        cur_widgets = []
+        state = {}
+        real_status = {}
+
+        save_btn = Button(cur_window, text='Save Changes', anchor=E)
+        save_btn.grid(row=0, column=4, pady=20, padx=20, sticky=E)
+
+        def updt_status(x, v):
+            self.master.set_status(x, v)
+
+        def save_handler():
+            for k in state:
+                updt_status(k, state[k].get())
+
+        save_btn.bind('<Button-1>',
+                      self.helper.generate_handler(save_handler))
+
+        def get_folder_data():
+            return self.master.get_all_folders()
+
+        def get_status(a):
+            return self.master.get_folder_status(a)
+
+        def refresh():
+            nonlocal cur_widgets
+            for w in cur_widgets:
+                w.destroy()
+            cur_widgets = []
+            folderdata = get_folder_data()
+            status = get_status(folderdata)
+            cur_window.geometry(str(self.sizes[0]) + 'x' +
+                                str(self.sizes[1] + 20 + 35 * (len(folderdata) - 3)))
+
+            for i in range(len(folderdata)):
+                folder = folderdata[i]
+                folder_lbl = Label(cur_window, text=folder, width=50)
+                folder_lbl.grid(row=i + 1, columnspan=3, padx=30, pady=5)
+                cur_widgets.append(folder_lbl)
+
+                check_var = IntVar(cur_window)
+                folder_check = Checkbutton(cur_window, variable=check_var,
+                                           onvalue=1, offvalue=0)
+                folder_check.grid(row=i + 1, column=4, padx=30, pady=5)
+                if status[folder]:
+                    folder_check.select()
+                cur_widgets.append(folder_check)
+                state[folder] = check_var
+
+        refresh_btn.bind('<Button-1>',
+                         self.helper.generate_handler(refresh))
+        refresh()
