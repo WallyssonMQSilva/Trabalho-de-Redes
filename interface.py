@@ -220,10 +220,13 @@ class GUI:
 
 class Program:
     def __init__(self):
+        self.basedir = os.getcwd()
+        self.folders_dir = os.path.join(self.basedir, 'Sync Folders')
+        self.zips_dir = os.path.join(self.basedir, '.zips')
+        self.folders = [os.path.splitext(file)[0] for file in os.listdir(self.zips_dir)]
+        self.folder_status = {a: int(a in os.listdir(self.folders_dir)) for a in self.folders}
         self.gui = GUI(self)
         self.gui.initial()
-        self.folders = ['Folder 1', 'Folder 2', 'Folder 3']
-        self.folder_status = {a: 0 for a in self.folders}
         mainloop()
 
     def add_folder(self):
@@ -239,14 +242,13 @@ class Program:
         return a
 
     def get_all_folders(self):
-        self.add_folder()
         return self.folders.copy()
 
     def get_folder_status(self, folder):
-        self.add_folder()
         return self.folder_status.copy()
 
     def get_files_metadata(self, folder):
+        #TODO
         a = []
         for i in range(16):
             a.append(['Random File', '00:00:00', '0/0/0000',
@@ -254,9 +256,19 @@ class Program:
         return a
 
     def set_status(self, folder, new_status):
+        #TODO
+        if new_status == self.folder_status[folder]:
+            return
         self.folder_status[folder] = new_status
+        if new_status:
+            pass
+            #Adicionar a pasta na sincronização
+        else:
+            pass
+            #Retirar a pasta da sincronização
         
         
 
 if __name__=="__main__":
+    print(os.getcwd())
     a = Program()
