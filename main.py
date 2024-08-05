@@ -827,8 +827,8 @@ else:
     sys.exit(0)
 
 
-
 # ips check
+
 print("testando IPs da rede")
 base_ip = "192.168."
 reachable_ips = []
@@ -942,14 +942,7 @@ class GUI:
 
         submit_btn.bind('<Button-1>',
                         self.helper.generate_handler(submit_handler))
-        '''
-        abrir toplevel ou reconfigurar a janela principal para mostrar prompt de caminho da pasta
-        verificar se o caminho existe, e dar erro se não existir
-        verificar se já existe pasta sincronizada com o mesmo nome e dar erro se existir
-        criar nova pasta no diretorio de pastas compartilhadas com o nome original
-        copiar arquivos da pasta original para essa nova pasta (talvez precise dar um lock nelas)
-        confirmar o sucesso da transferencia para o usuário
-        '''
+        
 
     def see_files(self):
         cur_window = Toplevel(self.root, bg=self.bg)
@@ -981,13 +974,6 @@ class GUI:
         refresh_btn.bind('<Button-1>',
                          self.helper.generate_handler(refresh))
         refresh()
-        '''
-        abrir guia menu, tabela ou combo-box para escolher a pasta para visualizar os arquivos
-        serão mostradas só as pastas com sincronização aceita
-        após escolhida a pasta, haverá uma nova guia onde
-            o usuário verá metadata dos arquivos da pasta
-        refresh automatico a cada 5 segundos talvez
-        '''
 
     def show_folder(self, folder):
         cur_window = Toplevel(self.root, bg=self.bg)
@@ -1006,12 +992,14 @@ class GUI:
                 w.destroy()
             cur_labels = []
             metadata = get_metadata()
+            mx = self.sizes[0]
             for i, file in enumerate(metadata):
-                file_lbl = Label(cur_window,
-                                 text="  ||  ".join(metadata[i]), anchor=W)
+                file_str = "  ||  ".join(metadata[i])
+                mx = max(mx, 40+6*len(file_str))
+                file_lbl = Label(cur_window, text=file_str, anchor=W)
                 file_lbl.grid(row=i + 1, columnspan=3, padx=30, pady=5, sticky=W)
                 cur_labels.append(file_lbl)
-            cur_window.geometry(str(self.sizes[0]) + 'x' +
+            cur_window.geometry(str(mx) + 'x' +
                                 str(self.sizes[1] + 20 + 30 * (len(metadata) - 3)))
 
         refresh_btn.bind('<Button-1>',
@@ -1075,13 +1063,6 @@ class GUI:
         refresh_btn.bind('<Button-1>',
                          self.helper.generate_handler(refresh))
         refresh()
-        '''
-        abrir guia de seleção de todas as pastas na rede e mostrar o status de
-            sincronização ou não
-        permitir escolher uma pasta para alterar o status de sincronização:
-            alterar a permissão do NetworkNode de copiar ou não as mudanças da pasta
-
-        '''
 
 
 class Program:
@@ -1099,12 +1080,26 @@ class Program:
         self.gui.initial()
         mainloop()
 
-
-    def add_folder(self):
-        self.folders.append('Folder ' + str(len(self.folders) + 1))
-        self.folder_status[self.folders[-1]] = 0
+    def updt_folders(self):
+        self.folders = set()
+        for folder in os.listdir(self.folders_dir):
+            if (os.path.isfile(folder)):
+                continue
+            self.folders.add(folder)
+            if folder not in self.folder_status:
+                self.folder_status[folder] = 1
+        for file in os.listdir(self.zips_dir):
+            cur_folder = os.path.splitext(file)[0]
+            self.folders.add(cur_folder)
+            if cur_folder not in self.folder_status:
+                self.folder_status[cur_folder] = 0
+        global G_folder_status
+        G_folder_status= self.folder_status
+        self.folders = list(self.folders)
+        print(self.folders)
 
     def get_synched_folders(self):
+        self.updt_folders()
         a = []
         for i in self.folders:
             if self.folder_status[i]:
@@ -1112,6 +1107,7 @@ class Program:
         return a
 
     def get_all_folders(self):
+        self.updt_folders()
         return self.folders.copy()
 
     def get_folder_status(self, folder):
@@ -1160,4 +1156,3 @@ a = Program()
 
 input()
 node_thread.join()
-
