@@ -31,7 +31,6 @@ G_folder_status = {}
 def run_node(param1):
     n = NetworkNode(param1)
 
-
 def ping_ip(ip):
     param = '-n' if platform.system().lower() == 'windows' else '-c'
     command = ['ping', param, '1', ip]
@@ -149,6 +148,7 @@ def get_directory_state(directory):
     return state
 
 def zip_unzip_check(source_folder, dest_folder, check_interval=2):
+    #W: check interval = 1
     os.makedirs(dest_folder, exist_ok=True)
 
     folder_mod_times = {}
@@ -204,7 +204,7 @@ def zip_unzip_check(source_folder, dest_folder, check_interval=2):
 # ips check
 def ip_check():
     print("testando IPs da rede")
-    base_ip = "192.168."
+    base_ip = '.'.join(socket.gethostbyname(socket.gethostname()).split('.')[:2])+'.'
     reachable_ips = []
     num_threads = 50
 
@@ -240,11 +240,26 @@ class Program:
         mainloop()
 
 
-    def add_folder(self):
-        self.folders.append('Folder ' + str(len(self.folders) + 1))
-        self.folder_status[self.folders[-1]] = 0
+    def updt_folders(self):
+        self.folders = set()
+        for folder in os.listdir(self.folders_dir):
+            if (os.path.isfile(folder)):
+                continue
+            self.folders.add(folder)
+            if folder not in self.folder_status:
+                self.folder_status[folder] = 1
+        for file in os.listdir(self.zips_dir):
+            cur_folder = os.path.splitext(file)[0]
+            self.folders.add(cur_folder)
+            if cur_folder not in self.folder_status:
+                self.folder_status[cur_folder] = 0
+        global G_folder_status
+        G_folder_status= self.folder_status
+        self.folders = list(self.folders)
+        print(self.folders)
 
     def get_synched_folders(self):
+        self.updt_folders()
         a = []
         for i in self.folders:
             if self.folder_status[i]:
@@ -252,6 +267,7 @@ class Program:
         return a
 
     def get_all_folders(self):
+        self.updt_folders()
         return self.folders.copy()
 
     def get_folder_status(self, folder):
@@ -293,14 +309,15 @@ if __name__=='__main__':
         print("running as administrator")
     else:
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, __file__, None, 1)
-        sys.exit(0)
-    #ip_check()
+        #W: sys.exit(0)
+    ip_check()
     # zip e unzip
+    node_thread = threading.Thread(target=run_node, args=(dest_folder,))
+    node_thread.daemon = True
+    node_thread.start()
     zip_thread = threading.Thread(target=zip_unzip_check, args=(source_folder,dest_folder))
     zip_thread.daemon = True  # Optional: allows the thread to exit when the main program exits
     zip_thread.start()
     a = Program()
-    print('here')
-
     input()
     node_thread.join()
